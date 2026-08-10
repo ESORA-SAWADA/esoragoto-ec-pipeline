@@ -67,57 +67,33 @@ def start_sunset_live_stream(duration_seconds=3600, stream_key=None, rtmp_server
     else:
         target_rtmp_url = f"{rtmp_server}/DUMMY_KEY"
 
-    # 入力ソース動画（GoPro定点カメラ最新縦型動画 / Google Drive/Mac 互換パス探索）
-    vault_dir = "/var/secured_vault" if (os.path.exists("/var/secured_vault") and os.access("/var/secured_vault", os.W_OK)) else os.path.expanduser("~/secured_vault")
-    candidate_paths = [
-        os.path.join(vault_dir, "camera/latest_vertical.mp4"),
-        "./latest_reel_video.mp4",
-        "./latest_vertical.mp4",
-        "../07_アセット/02_デイリー動画素材/latest_vertical.mp4"
-    ]
-    
-    # 02_デイリー動画素材 から最新の mp4 を探索追加
-    daily_dir = os.path.abspath("../07_アセット/02_デイリー動画素材")
-    if os.path.exists(daily_dir):
-        mp4_files = [os.path.join(daily_dir, f) for f in os.listdir(daily_dir) if f.lower().endswith(".mp4")]
-        if mp4_files:
-            latest_mp4 = max(mp4_files, key=os.path.getmtime)
-            candidate_paths.insert(0, latest_mp4)
-
-    # 1. GoPro HERO8 のリアルタイム RTSP/Live 生ストリーム通信を優先探索
+    # ★ ユーザーポリシー厳守: 録画動画（MP4）のループ再生フォールバックは100%完全排除！
+    # リアルタイム生ライブストリーム通信（GoPro HERO8 生中継）のみを許可します。
     gopro_live_url = None
+    gopro_ip = "172.22.137.51"
+    
     try:
         import socket
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(1.5)
-        # GoPro USB IP 疎通確認 (172.22.137.51:8554 or 8080)
-        if s.connect_ex(("172.22.137.51", 8554)) == 0:
-            gopro_live_url = "udp://172.22.137.51:8554"
-            print("📹 [SunsetStreamer] GoPro HERO8 のリアルタイム生ライブストリーム (RTSP/UDP) を自動検出しました！")
+        s.settimeout(2.0)
+        # GoPro USB IP 通信チェック (8554 or 8080)
+        if s.connect_ex((gopro_ip, 8554)) == 0:
+            gopro_live_url = f"udp://{gopro_ip}:8554"
+            print(f"📹 [SunsetStreamer] GoPro HERO8 リアルタイム生中継ストリーム ({gopro_live_url}) の接続を確立しました！")
+        elif s.connect_ex((gopro_ip, 8080)) == 0:
+            # GoPro Open API ライブストリーム URL
+            gopro_live_url = f"http://{gopro_ip}:8080/live/mode"
+            print(f"📹 [SunsetStreamer] GoPro HERO8 Webライブストリーム ({gopro_live_url}) の接続を確立しました！")
         s.close()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"⚠️ [SunsetStreamer] GoPro 接続判定例外: {e}")
+
+    if not gopro_live_url:
+        print("❌ [SunsetStreamer] エラー: GoPro HERO8 のリアルタイム生ライブ通信が検出できません。")
+        print("🛑 ユーザールールポリシーに従い、録画動画のループ再生フォールバックは完全無効化されているため、配信を安全停止します。")
+        return False
 
     input_video = gopro_live_url
-    if not input_video:
-        for cand in candidate_paths:
-            if os.path.exists(cand):
-                input_video = cand
-                break
-
-    if input_video and (input_video.startswith("udp://") or os.path.exists(input_video)):
-        if not input_video.startswith("udp://"):
-            file_mtime = os.path.getmtime(input_video)
-            now_ts = time.time()
-            age_hours = (now_ts - file_mtime) / 3600.0
-            if age_hours > 12:
-                print(f"❌ [SunsetStreamer] エラー: 入力動画 '{input_video}' が古すぎます ({age_hours:.1f} 時間前)。")
-                print("⚠️ 古い動画の使い回しを100%防止するため、配信を安全停止します。")
-                return False
-            print(f"🎥 [SunsetStreamer] 有効な最新配信ソース素材を発見しました: {input_video} ({age_hours:.1f}時間前作成)")
-    else:
-        print(f"❌ [SunsetStreamer] エラー: 配信ソース動画が見つかりません。")
-        return False
 
     is_image = input_video.endswith(('.jpg', '.jpeg', '.png'))
 
