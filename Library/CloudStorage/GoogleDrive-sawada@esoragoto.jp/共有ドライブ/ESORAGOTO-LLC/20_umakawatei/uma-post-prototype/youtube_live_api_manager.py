@@ -112,8 +112,22 @@ def create_auto_live_broadcast(title=None, description=None, privacy_status="pub
     except Exception as ex:
         print(f"⚠️ [YouTubeAPI] 既存枠チェック中の警告: {ex}")
 
-    now = datetime.now(timezone.utc)
-    start_time_iso = (now + timedelta(seconds=10)).isoformat()
+    # 本日の佐渡島日没時刻(JST)を自動計算して公開予定時間(scheduledStartTime)に設定
+    try:
+        from sunset_detector import get_sunset_info
+        sunset_info = get_sunset_info()
+        sunset_dt = sunset_info.get("sunset_dt")
+        if sunset_dt:
+            scheduled_time_utc = sunset_dt.astimezone(timezone.utc)
+            start_time_iso = scheduled_time_utc.isoformat()
+            print(f"🌅 [YouTubeAPI] 配信予定時刻を佐渡の日没時刻 ({sunset_dt.strftime('%H:%M JST')}) に正確設定しました！")
+        else:
+            now = datetime.now(timezone.utc)
+            start_time_iso = (now + timedelta(seconds=10)).isoformat()
+    except Exception as e:
+        print(f"⚠️ [YouTubeAPI] 日没時刻算出例外: {e}")
+        now = datetime.now(timezone.utc)
+        start_time_iso = (now + timedelta(seconds=10)).isoformat()
 
     # 1. ライブ配信枠 (Broadcast) の作成
     broadcast_body = {
