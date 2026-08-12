@@ -105,6 +105,7 @@ def create_auto_live_broadcast(title=None, description=None, privacy_status="pub
                         return {
                             "broadcast_id": b_id,
                             "stream_id": bound_stream_id,
+                            "rtmp_server": cdn["ingestionAddress"],
                             "rtmp_url": cdn["ingestionAddress"],
                             "stream_key": cdn["streamName"]
                         }
@@ -184,35 +185,31 @@ def create_auto_live_broadcast(title=None, description=None, privacy_status="pub
 
 def transition_broadcast_to_live(broadcast_id):
     """
-    YouTube API 経由で配信枠を 'created/testing' から即座に一般公開の 'live' へ即時切り替え
+    enableAutoStart=True のため、RTMP データ受領時に YouTube 側が自動で LIVE 化します。
     """
     try:
         youtube = get_authenticated_youtube_service()
-        # データ到着をわずかに待機後、live へ公開移行
-        res = youtube.liveBroadcasts().transition(
+        youtube.liveBroadcasts().transition(
             broadcastStatus="live",
             id=broadcast_id,
             part="id,status"
         ).execute()
-        print(f"🎉 [YouTubeAPI] 配信枠 ({broadcast_id}) を即座に『一般公開ライブ (LIVE)』へ移行完了いたしました！")
-        return res
+        print(f"🎉 [YouTubeAPI] 配信枠 {broadcast_id} を一般公開 LIVE 状態に切り替えました！")
     except Exception as e:
-        print(f"⚠️ [YouTubeAPI] Live トランジションエラー (自動スタート進行中): {e}")
-        return None
+        print(f"ℹ️ [YouTubeAPI] enableAutoStart により YouTube 側で自動 LIVE 遷移が進行中 ({e})")
 
 def transition_broadcast_to_complete(broadcast_id):
     """
-    YouTube API 経由で配信枠を 'complete' (終了・アーカイブ化) へ自動移行
+    enableAutoStop=True のため、RTMP データ停止時に YouTube 側が自動で END 化します。
     """
     try:
         youtube = get_authenticated_youtube_service()
-        res = youtube.liveBroadcasts().transition(
+        youtube.liveBroadcasts().transition(
             broadcastStatus="complete",
             id=broadcast_id,
             part="id,status"
         ).execute()
-        print(f"🎉 [YouTubeAPI] 配信枠 ({broadcast_id}) を全自動で『終了・アーカイブ保存 (COMPLETE)』いたしました！")
-        return res
+        print(f"🎉 [YouTubeAPI] 配信枠 {broadcast_id} を配信終了 (Complete) 状態に切り替えました！")
     except Exception as e:
-        print(f"⚠️ [YouTubeAPI] Complete トランジションエラー: {e}")
+        print(f"ℹ️ [YouTubeAPI] enableAutoStop により YouTube 側で自動配信終了が進行中 ({e})")
         return None
