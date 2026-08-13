@@ -28,7 +28,7 @@ from video_compositor import (
     is_image_or_video_black
 )
 from calendar_integrator import get_google_calendar_events
-from event_post_generator import generate_event_post_copy
+from event_post_generator import generate_event_post
 from instagram_publisher import publish_reel_to_instagram
 import sunset_detector
 import youtube_live_api_manager
@@ -69,7 +69,7 @@ def main():
     events_summary = get_google_calendar_events()
     
     # Gemini による投稿文章・見出しの自動生成
-    title, subtitle, message = generate_event_post_copy(
+    title, subtitle, message = generate_event_post(
         mode=mode,
         weather=weather_status,
         temp=weather_temp,
