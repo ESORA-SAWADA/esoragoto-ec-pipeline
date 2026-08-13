@@ -69,12 +69,7 @@ def main():
     events_summary = get_google_calendar_events()
     
     # Gemini による投稿文章・見出しの自動生成
-    title, subtitle, message = generate_morning_post(
-        mode=mode,
-        weather=weather_status,
-        temp=weather_temp,
-        events=events_summary
-    )
+    title, subtitle, message = generate_morning_post()
 
     # STEP 2: 02_デイリー動画素材 から GoPro タイムラプス動画を第一優先で探索
     print("\n[STEP 2/4] 02_デイリー動画素材 (GoProタイムラプス動画) を第一優先スキャン中...")
