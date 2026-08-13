@@ -27,7 +27,7 @@ from video_compositor import (
     convert_image_to_reel_video,
     is_image_or_video_black
 )
-from calendar_integrator import get_calendar_events_summary
+from calendar_integrator import get_google_calendar_events
 from event_post_generator import generate_event_post_copy
 from instagram_publisher import publish_reel_to_instagram
 import sunset_detector
@@ -66,7 +66,7 @@ def main():
     weather_temp = str(weather_fetched.get("current_temp", weather_fetched.get("max_temp", "27")))
 
     # Google カレンダーイベントの取得
-    events_summary = get_calendar_events_summary()
+    events_summary = get_google_calendar_events()
     
     # Gemini による投稿文章・見出しの自動生成
     title, subtitle, message = generate_event_post_copy(
